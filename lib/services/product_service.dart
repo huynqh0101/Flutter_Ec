@@ -26,7 +26,25 @@ class ProductService {
       return [];
     }
   }
+  Future<Product> fetchProductById(String productId) async {
+    try {
+      // Query the specific product by ID
+      DocumentSnapshot snapshot = await _firestore.collection('amazon_products').doc(productId).get();
 
+      if (snapshot.exists) {
+        print('Product found');
+        // Return the product based on the data from Firestore
+        return Product.fromFirestore(snapshot);
+      } else {
+        print('Product not found');
+        throw Exception('Product not found');
+      }
+    } catch (e) {
+      print('Error fetching product by ID: $e');
+      // Throw the error to be handled by the caller
+      throw Exception('Error fetching product: $e');
+    }
+  }
   Future<List<Product>> fetchProductsAndSortByCreatAt() async {
     try {
       //querry

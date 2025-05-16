@@ -3,12 +3,15 @@ import 'package:untitled/core/app_export.dart';
 
 import '../../model/Cart/cart_item.dart';
 import '../../model/order/orders_model.dart';
+import '../../model/product.dart';
 import '../../routes/app_routes.dart';
 import '../../services/my_order_service.dart';
 import '../../services/auth_service.dart';
+import '../../services/product_service.dart';
 import '../../theme/custom_text_style.dart';
 import '../../theme/theme_helper.dart';
 import '../../widgets/custom_elevated_button.dart';
+import '../detail_screen/detail_screen.dart';
 
 class MyOrderScreen extends StatelessWidget {
   MyOrderService myOrderService = MyOrderService();
@@ -35,7 +38,7 @@ class MyOrderScreen extends StatelessWidget {
         leading: IconButton(
             icon: Icon(Icons.arrow_back, color: Colors.white),
             onPressed: () =>
-                Navigator.pushNamed(context, AppRoutes.homeScreen)),
+                Navigator.pop(context)),
         centerTitle: true,
       ),
       body: Column(
@@ -43,14 +46,14 @@ class MyOrderScreen extends StatelessWidget {
           // Order List
           Expanded(
             child:
-            buildOrderList(myOrderService.getOrdersByUserId(userId)),
+            buildOrderList(myOrderService.getOrdersByUserId(userId), context),
           ),
         ],
       ),
     );
   }
 
-  Widget buildOrderList(Future<List<OrdersModel>> futureOrders) {
+  Widget buildOrderList(Future<List<OrdersModel>> futureOrders, BuildContext context) {
     return FutureBuilder<List<OrdersModel>>(
       future: futureOrders,
       builder: (context, snapshot) {
@@ -66,7 +69,7 @@ class MyOrderScreen extends StatelessWidget {
           return ListView.builder(
             itemCount: orders.length,
             itemBuilder: (context, index) {
-              return _buildOrderCard(orders[index]);
+              return _buildOrderCard(orders[index], context);
             },
           );
         }
@@ -74,24 +77,7 @@ class MyOrderScreen extends StatelessWidget {
     );
   }
 
-  Widget _buildTab(String text, {bool isSelected = false}) {
-    return Container(
-      padding: const EdgeInsets.symmetric(vertical: 6.0, horizontal: 16.0),
-      decoration: BoxDecoration(
-        color: isSelected ? Colors.white : Colors.transparent,
-        borderRadius: BorderRadius.circular(20),
-      ),
-      child: Text(
-        text,
-        style: TextStyle(
-          color: isSelected ? Colors.deepPurple : Colors.white,
-          fontWeight: FontWeight.bold,
-        ),
-      ),
-    );
-  }
-
-  Widget _buildOrderCard(OrdersModel orderModel) {
+  Widget _buildOrderCard(OrdersModel orderModel, BuildContext context) {
     return Card(
       margin: const EdgeInsets.only(bottom: 10),
       shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
@@ -105,7 +91,7 @@ class MyOrderScreen extends StatelessWidget {
               mainAxisAlignment: MainAxisAlignment.spaceBetween,
               children: [
                 Text(
-                  "DEERMA",
+                  "STATUS",
                   style: CustomTextStyles.titleProductBlack
                       .copyWith(fontSize: 16.h),
                 ),
@@ -148,7 +134,7 @@ class MyOrderScreen extends StatelessWidget {
             Column(
               children: [
                 for (int i = 0; i < orderModel.productItems.length; i++)
-                  _buildProductItem(orderModel.productItems[i]),
+                  _buildProductItem(orderModel.productItems[i], context),
               ],
             ),
 
@@ -165,12 +151,6 @@ class MyOrderScreen extends StatelessWidget {
                       fontSize: 16,
                       color: Colors.black),
                 ),
-                CustomElevatedButton(
-                  onPressed: () {},
-                  height: 40.h,
-                  width: 100.h,
-                  text: 'Write review',
-                ),
               ],
             ),
           ],
@@ -179,58 +159,85 @@ class MyOrderScreen extends StatelessWidget {
     );
   }
 
-  Widget _buildProductItem(CartItem cartItem) {
-    return Row(
-      crossAxisAlignment: CrossAxisAlignment.start,
-      children: [
-        // Product Image
-        Container(
-          height: 60,
-          width: 60,
-          margin: const EdgeInsets.only(right: 8),
-          decoration: BoxDecoration(
-            borderRadius: BorderRadius.circular(8),
-            image: DecorationImage(
-              image: NetworkImage(cartItem.imageUrl),
-              fit: BoxFit.cover,
+  Widget _buildProductItem(CartItem cartItem, BuildContext context) {
+    return GestureDetector(
+      onTap: () async {
+        try {
+          // Fetch product by ID
+          Product product = await ProductService().fetchProductById(cartItem.productId);
+
+          if (product != null) {
+            // Navigate to DetailScreen with the Product
+            Navigator.push(
+              context, // This is the correct use of context within the build method
+              MaterialPageRoute(
+                builder: (context) => ProductDetailScreen(product: product),
+              ),
+            );
+          } else {
+            // Handle the case where product is not found
+            print('Product not found');
+          }
+        } catch (e) {
+          // Handle any errors that might occur during the fetch
+          print('Error fetching product: $e');
+        }
+      },
+      child: Row(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          // Product Image
+          Container(
+            height: 60,
+            width: 60,
+            margin: const EdgeInsets.only(right: 8),
+            decoration: BoxDecoration(
+              borderRadius: BorderRadius.circular(8),
+              image: DecorationImage(
+                image: NetworkImage(cartItem.imageUrl),
+                fit: BoxFit.cover,
+              ),
             ),
           ),
-        ),
 
-        // Product Info
-        Expanded(
-          child: Column(
-            crossAxisAlignment: CrossAxisAlignment.start,
-            children: [
-              Text(
-                cartItem.productName,
-                style: TextStyle(fontWeight: FontWeight.bold, fontSize: 14),
-                maxLines: 2,
-                overflow: TextOverflow.ellipsis,
-              ),
-              const SizedBox(height: 4),
-              Row(
-                mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                children: [
-                  Column(
-                    children: [
-                      Text(
-                        "\$${cartItem.price}",
-                        style: TextStyle(
-                          fontWeight: FontWeight.bold,
-                          color: Colors.red,
-                          fontSize: 16,
+          // Product Info
+          Expanded(
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Text(
+                  cartItem.productName,
+                  style: TextStyle(fontWeight: FontWeight.bold, fontSize: 14),
+                  maxLines: 2,
+                  overflow: TextOverflow.ellipsis,
+                ),
+                const SizedBox(height: 4),
+                Row(
+                  mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                  children: [
+                    Column(
+                      children: [
+                        Text(
+                          "\$${cartItem.price}",
+                          style: TextStyle(
+                            fontWeight: FontWeight.bold,
+                            color: Colors.red,
+                            fontSize: 16,
+                          ),
                         ),
-                      ),
-                    ],
-                  ),
-                  Text("x${cartItem.quantity}"),
-                ],
-              ),
-            ],
+                      ],
+                    ),
+                    Text("x${cartItem.quantity}"),
+                  ],
+                ),
+              ],
+            ),
           ),
-        ),
-      ],
+        ],
+      ),
     );
   }
+
+
+
 }

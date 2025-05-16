@@ -11,7 +11,7 @@ import 'package:untitled/presentation/orders_screen/my_order_screen.dart';
 import 'package:untitled/services/shop_service/shop_service.dart';
 import 'package:untitled/services/user_service.dart';
 import 'package:untitled/widgets/custom_elevated_button.dart';
-
+import 'package:untitled/presentation/welcome_onboarding_screen/welcome_onboarding_screen.dart';
 import '../../model/shop_model.dart';
 import '../../widgets/custom_bottom_bar.dart';
 import '../orders_screen/edit_info.dart';
@@ -291,7 +291,21 @@ class _ProfileScreenState extends State<ProfileScreen> {
             SizedBox(height: 110),
 
             TextButton(
-              onPressed: () {},
+              onPressed: () async {
+                try {
+                  await AuthService().signOut();
+
+                  Navigator.pushReplacement(
+                    context,
+                    MaterialPageRoute(builder: (context) => WelcomeOnboardingScreen()),
+                  );
+                } catch (e) {
+                  // Hiển thị thông báo lỗi
+                  ScaffoldMessenger.of(context).showSnackBar(
+                    SnackBar(content: Text(e.toString())),
+                  );
+                }
+              },
               child: Text(
                 'Sign Out',
                 style: CustomTextStyles.bodyMediumPrimary

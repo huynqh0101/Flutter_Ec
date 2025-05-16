@@ -76,12 +76,12 @@ class CartService {
             price: (item['price'] as num).toDouble(),
             quantity: item['quantity'],
             imageUrl: item['imageUrl'],
+            // Quan trọng: Mặc định là true nếu không được chỉ định
+            isSelect: item['isSelect'] ?? true,
           );
         }).toList();
       } else {
         await cartRef.set({'cartItems': []});
-        print('gio hang loi');
-
         return [];
       }
     } catch (e) {
