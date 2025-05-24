@@ -14,6 +14,8 @@ import 'package:untitled/services/user_service.dart';
 import 'package:untitled/widgets/custom_elevated_button.dart';
 
 import '../../model/Cart/cart_item.dart';
+import '../../services/stripe_service.dart';
+import '../../widgets/custom_drop_down.dart';
 
 class OrderScreen extends StatefulWidget {
   final List<CartItem> items;
@@ -27,14 +29,13 @@ class OrderScreen extends StatefulWidget {
 }
 
 class _OrderScreenState extends State<OrderScreen> {
+  String _paymentMethod = 'COD';
   late Future<CustomUser> customUser;
   String userId = '';
   late List<CartItem> listSelect;
   late double sum;
   String? _selectedDeliveryOption;
-  String? _paymentMethod;
   double _shipPrice = 0;
-  TextEditingController? _discountCodeController;
   OrdersService ordersService = OrdersService();
   late AddressModel addressModel;
   late CartService cartService;
@@ -53,7 +54,7 @@ class _OrderScreenState extends State<OrderScreen> {
     listSelect = widget.items;
     sum = calculateTotal();
     cartService = CartService();
-    // _getAddress();
+    _getAddress();
   }
 
   double calculateTotal() {
@@ -66,14 +67,12 @@ class _OrderScreenState extends State<OrderScreen> {
     CustomUser currentUser = await customUser;
     if (currentUser.addressId != null) {
       final address =
-          await AddressRepository().getAddressById(currentUser.addressId!);
+      await AddressRepository().getAddressById(currentUser.addressId!);
       setState(() {
         province = address!.province;
         district = address.district;
         ward = address.ward;
       });
-
-      // print(' address : $address');
     }
   }
 
@@ -100,9 +99,6 @@ class _OrderScreenState extends State<OrderScreen> {
                     return Center(child: Text('No data available'));
                   }
                   if (snapshot.hasData) {
-                    // print('so san pham chon ${listSelect.length}');
-                    // print(cartService);
-
                     final user = snapshot.data!;
                     _getAddress();
                     return Container(
@@ -296,58 +292,9 @@ class _OrderScreenState extends State<OrderScreen> {
                       _buildDeliveryOption('Priority', 5,
                           'Receive from ${now.day + 1}-${now.month}-${now.year}'),
                       _buildDeliveryOption('Standard', 3,
-                          'Receive from ${now.day + 2}-${now.month}-${now.year}'),
+                          'Receive from ${now.day+ 2}-${now.month}-${now.year}'),
                       _buildDeliveryOption('Saver', 2,
                           'Receive from ${now.day + 3}-${now.month}-${now.year}'),
-                    ],
-                  ),
-                ),
-              ),
-              SizedBox(
-                height: 16.h,
-              ),
-              Container(
-                color: Colors.white,
-                child: Padding(
-                  padding: EdgeInsets.all(8.0),
-                  child: Column(
-                    children: [
-                      Row(
-                        children: [
-                          Icon(
-                            Icons.redeem,
-                            color: LightCodeColors().orangeA200,
-                          ),
-                          SizedBox(
-                            width: 2.h,
-                          ),
-                          Text(
-                            'Voucher',
-                            style: CustomTextStyles.titleProductBlack,
-                          ),
-                        ],
-                      ),
-                      SizedBox(height: 8.0),
-                      Row(
-                        children: [
-                          Expanded(
-                            child: TextField(
-                              controller: _discountCodeController,
-                              decoration: InputDecoration(
-                                hintText: 'Enter discount code',
-                              ),
-                            ),
-                          ),
-                          SizedBox(width: 8.0),
-                          Expanded(
-                              child: CustomElevatedButton(
-                            text: 'Apply',
-                            onPressed: () {
-                              print('voucher $_discountCodeController');
-                            },
-                          ))
-                        ],
-                      ),
                     ],
                   ),
                 ),
@@ -379,7 +326,7 @@ class _OrderScreenState extends State<OrderScreen> {
                           ],
                         ),
                         SizedBox(height: 8.0),
-                        _buildPaymentMethod('COD(Thanh toán khi nhận hàng)'),
+                        _buildPaymentMethod(),
                       ],
                     ),
                   )),
@@ -424,7 +371,7 @@ class _OrderScreenState extends State<OrderScreen> {
                           Text(
                             '\$${calculateTotal()}',
                             style:
-                                TextStyle(color: LightCodeColors().orangeA200),
+                            TextStyle(color: LightCodeColors().orangeA200),
                           ),
                           SizedBox(
                             width: 16,
@@ -445,7 +392,7 @@ class _OrderScreenState extends State<OrderScreen> {
                           Text(
                             '\$${_shipPrice}',
                             style:
-                                TextStyle(color: LightCodeColors().orangeA200),
+                            TextStyle(color: LightCodeColors().orangeA200),
                           ),
                           SizedBox(
                             width: 16,
@@ -469,7 +416,7 @@ class _OrderScreenState extends State<OrderScreen> {
                           Text(
                             '\$${calculateTotal() + _shipPrice}',
                             style:
-                                TextStyle(color: LightCodeColors().orangeA200),
+                            TextStyle(color: LightCodeColors().orangeA200),
                           ),
                           SizedBox(
                             width: 16,
@@ -489,25 +436,62 @@ class _OrderScreenState extends State<OrderScreen> {
                     padding: EdgeInsets.all(8.h),
                     child: Center(
                         child: CustomElevatedButton(
-                      text: 'Buy now',
-                      onPressed: () async {
-                        OrdersModel order = OrdersModel(
-                            orderId: '',
-                            userId: userId,
-                            productItems: listSelect,
-                            totalPrice: calculateTotal() + _shipPrice,
-                            status: 'Pending',
-                            createdAt: DateTime.now());
-                        await ordersService.createOrder(order);
-                        print(userId);
-                        await cartService.deleteProduct(userId);
+                          text: 'Buy now',
+                          onPressed: () async {
+                            OrdersModel order = OrdersModel(
+                              orderId: '',
+                              userId: userId,
+                              productItems: listSelect,
+                              totalPrice: calculateTotal() + _shipPrice,
+                              status: 'Pending',
+                              createdAt: DateTime.now(),
+                            );
 
-                        Navigator.push(
-                            context,
-                            MaterialPageRoute(
-                                builder: (context) => AfterOrder()));
-                      },
-                    ))),
+                            if (_paymentMethod == 'COD') {
+                              // If payment method is COD, keep the original logic
+                              await ordersService.createOrder(order);
+                              await cartService.deleteSelectedProducts(userId, listSelect);
+
+                              Navigator.push(
+                                context,
+                                MaterialPageRoute(
+                                  builder: (context) => AfterOrder(),
+                                ),
+                              );
+                            } else if (_paymentMethod == 'Online Payment') {
+                              try {
+                                // If payment method is Online Payment, call Stripe service
+                                bool paymentSuccessful = await StripeService.instance.makePayment(
+                                  amount: calculateTotal() + _shipPrice,
+                                );
+
+                                if (paymentSuccessful) {
+                                  await ordersService.createOrder(order);
+                                  await cartService.deleteSelectedProducts(userId, listSelect);
+
+                                  Navigator.push(
+                                    context,
+                                    MaterialPageRoute(
+                                      builder: (context) => AfterOrder(),
+                                    ),
+                                  );
+                                } else {
+                                  // Handle payment failure
+                                  ScaffoldMessenger.of(context).showSnackBar(
+                                    SnackBar(content: Text('Payment failed, please try again.')),
+                                  );
+                                }
+                              } catch (e) {
+                                // Handle payment failure
+                                ScaffoldMessenger.of(context).showSnackBar(
+                                  SnackBar(content: Text('Payment failed, please try again.')),
+                                );
+                              }
+                            }
+                          },
+                        )
+                    )
+                ),
               )
             ],
           ),
@@ -541,30 +525,31 @@ class _OrderScreenState extends State<OrderScreen> {
     );
   }
 
-  Widget _buildPaymentMethod(String method) {
-    return InkWell(
-      onTap: () {
-        setState(() {
-          _paymentMethod = method;
-        });
-      },
-      child: Card(
-        color: _paymentMethod == method ? Colors.orange.shade100 : null,
-        child: Padding(
-          padding: EdgeInsets.all(16.0),
-          child: Row(
-            children: [
-              Expanded(child: Text(method)),
-              IconButton(
-                onPressed: () {
-                  // Change payment method
-                },
-                icon: Icon(Icons.edit),
-              ),
-            ],
-          ),
-        ),
+  Widget _buildPaymentMethod() {
+    return DropdownButtonFormField<String>(
+      value: _paymentMethod,
+      decoration: const InputDecoration(
+        labelText: 'Payment Method',
+        border: OutlineInputBorder(),
+        contentPadding: EdgeInsets.symmetric(horizontal: 16.0, vertical: 8.0),
       ),
+      items: const [
+        DropdownMenuItem(
+          value: 'COD',
+          child: Text('COD (Cash On Delivery)'),
+        ),
+        DropdownMenuItem(
+          value: 'Online Payment',
+          child: Text('Online Payment'),
+        ),
+      ],
+      onChanged: (String? newValue) {
+        if (newValue != null) {
+          setState(() {
+            _paymentMethod = newValue;
+          });
+        }
+      },
     );
   }
 }

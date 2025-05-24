@@ -21,7 +21,6 @@ class AddressRepository {
     try {
       final docSnapshot = await _addressCollection.doc(id).get();
       if (docSnapshot.exists) {
-        print('lay dia chi thanh cong');
         return AddressModel.fromMap(
             docSnapshot.id, docSnapshot.data() as Map<String, dynamic>);
       } else {

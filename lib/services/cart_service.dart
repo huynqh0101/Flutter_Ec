@@ -76,12 +76,12 @@ class CartService {
             price: (item['price'] as num).toDouble(),
             quantity: item['quantity'],
             imageUrl: item['imageUrl'],
-            // Quan trọng: Mặc định là true nếu không được chỉ định
-            isSelect: item['isSelect'] ?? true,
           );
         }).toList();
       } else {
         await cartRef.set({'cartItems': []});
+        print('gio hang loi');
+
         return [];
       }
     } catch (e) {
@@ -129,21 +129,67 @@ class CartService {
         // Lọc ra những sản phẩm chưa được chọn
         final updatedCartItems = cartItems.where((item) {
           final productId = item['productId'];
+          // Kiểm tra nếu sản phẩm trong cart chưa được chọn trong _listSelectItem
           return !_listSelectItem.any((selectedItem) => selectedItem.productId == productId);
         }).toList();
 
-        // Cập nhật lại giỏ hàng với các sản phẩm chưa được chọn
-        await cartRef.update({
-          'cartItems': updatedCartItems,
-        });
+        // Nếu không có thay đổi gì, có thể bỏ qua việc cập nhật giỏ hàng
+        if (updatedCartItems.length != cartItems.length) {
+          // Cập nhật lại giỏ hàng với các sản phẩm chưa được chọn
+          await cartRef.update({
+            'cartItems': updatedCartItems,
+          });
 
-        print('Selected items cleared successfully');
+          print('Selected items cleared successfully');
+        } else {
+          print('No selected items to clear');
+        }
+      } else {
+        print('Cart not found for user $userId');
       }
     } catch (e) {
       print("Error clearing selected items: $e");
       rethrow;
     }
   }
+
+  Future<void> deleteSelectedProducts(String userId, List<CartItem> listSelect) async {
+    try {
+      final cartRef = _firestore.collection('carts').doc(userId);
+      final cartSnapshot = await cartRef.get();
+
+      if (cartSnapshot.exists) {
+        final data = cartSnapshot.data() as Map<String, dynamic>;
+        final List<dynamic> cartItems = data['cartItems'] ?? [];
+
+        // Lọc ra những sản phẩm chưa được chọn trong listSelect
+        final updatedCartItems = cartItems.where((item) {
+          final productId = item['productId'];
+          // Kiểm tra nếu sản phẩm đã được chọn trong listSelect
+          return !listSelect.any((selectedItem) => selectedItem.productId == productId);
+        }).toList();
+
+        // Nếu có sự thay đổi trong giỏ hàng, cập nhật lại
+        if (updatedCartItems.length != cartItems.length) {
+          // Cập nhật lại giỏ hàng với các sản phẩm chưa được chọn mua
+          await cartRef.update({
+            'cartItems': updatedCartItems,
+          });
+
+          print('Selected products removed successfully');
+        } else {
+          print('No selected products to remove');
+        }
+      } else {
+        print('Cart not found for user $userId');
+      }
+    } catch (e) {
+      print("Error removing selected products: $e");
+      rethrow;
+    }
+  }
+
+
 
 
   //add selectItem

@@ -6,32 +6,35 @@ class StripeService {
 
   static final StripeService instance = StripeService._();
 
-  Future<void> makePayment() async {
+  Future<bool> makePayment({required amount}) async {
     try {
       String? paymentIntentClientSecret = await _createPaymentIntent(
-        100,
-        "usd",
+        amount,
+        "USD",
       );
-      if (paymentIntentClientSecret == null) return;
+
       await Stripe.instance.initPaymentSheet(
         paymentSheetParameters: SetupPaymentSheetParameters(
           paymentIntentClientSecret: paymentIntentClientSecret,
-          merchantDisplayName: "Hussain Mustafa",
+          merchantDisplayName: "Global Cart",
         ),
       );
-      await _processPayment();
+
+      await Stripe.instance.presentPaymentSheet();
+      return true;
+
     } catch (e) {
-      print(e);
+      return false;
+
     }
   }
 
-  Future<String?> _createPaymentIntent(int amount, String currency) async {
+
+  Future<String?> _createPaymentIntent(double amount, String currency) async {
     try {
       final Dio dio = Dio();
       Map<String, dynamic> data = {
-        "amount": _calculateAmount(
-          amount,
-        ),
+        "amount": (amount * 100).toInt().toString(),
         "currency": currency,
       };
       var response = await dio.post(
@@ -55,17 +58,4 @@ class StripeService {
     return null;
   }
 
-  Future<void> _processPayment() async {
-    try {
-      await Stripe.instance.presentPaymentSheet();
-      await Stripe.instance.confirmPaymentSheetPayment();
-    } catch (e) {
-      print(e);
-    }
-  }
-
-  String _calculateAmount(int amount) {
-    final calculatedAmount = amount * 100;
-    return calculatedAmount.toString();
-  }
 }

@@ -1,6 +1,5 @@
 import 'package:untitled/model/address_model.dart';
 import 'package:untitled/model/product.dart';
-
 class ShopModel{
   String id;
   String name;
@@ -11,7 +10,6 @@ class ShopModel{
   final List<String>? orders;
   final List<String>? vouchers;
   String? addressId;
-
   ShopModel({
     required this.id,
     required this.name,
@@ -36,7 +34,6 @@ class ShopModel{
       'addressId': addressId,
     };
   }
-
   // Method to create ShopModel from Firestore Map
   factory ShopModel.fromMap(Map<String, dynamic> map) {
     return ShopModel(
@@ -51,5 +48,4 @@ class ShopModel{
       addressId: map['addressId'],
     );
   }
-
 }

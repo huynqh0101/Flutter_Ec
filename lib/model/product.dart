@@ -15,6 +15,8 @@ class Product {
   final String category;
   final List<String> related_product;
   final List<Review> reviews;
+  final DocumentSnapshot? documentSnapshot;
+
 
   Product({
     required this.discount_percentage,
@@ -30,6 +32,7 @@ class Product {
     required this.brand,
     required this.related_product,
     this.reviews = const [],
+    this.documentSnapshot,
   });
 
   Map<String, dynamic> toMap() {
@@ -52,22 +55,21 @@ class Product {
     final data = doc.data() as Map<String, dynamic>;
 
     return Product(
-        discount_percentage: data['discount_percentage'] ?? 0,
-        product_id: data['item_amazon_id'] ?? '',
-        product_name: data['title'] ?? '',
-        category: data['category'] ?? '',
-        about_product: data['description'] ?? '',
-        actual_price: data['price'] ?? 0.0,
-        rating: data['rating'] ?? 0.0,
-        rating_count: data['rating_count'] ?? 0,
-        img_link: data['imUrl'] ?? '',
-        brand: data['brand'] ?? '',
-        related_product: List<String>.from(data['related'] ?? []),
-        discounted_price: (data['price'] * (1 - data['discount_percentage'] / 100) * 100).roundToDouble() / 100
+      discount_percentage: data['discount_percentage'] ?? 0,
+      product_id: data['item_amazon_id'] ?? '',
+      product_name: data['title'] ?? '',
+      category: data['category'] ?? '',
+      about_product: data['description'] ?? '',
+      actual_price: data['price'] ?? 0.0,
+      rating: data['rating'] ?? 0.0,
+      rating_count: data['rating_count'] ?? 0,
+      img_link: data['imUrl'] ?? '',
+      brand: data['brand'] ?? '',
+      related_product: List<String>.from(data['related'] ?? []),
+      discounted_price: (data['price'] * (1 - data['discount_percentage'] / 100) * 100).roundToDouble() / 100,
+      documentSnapshot: doc,
     );
   }
-
-
 
   Future<List<Product>> fetchRelatedProducts(String id) async {
     try {
@@ -117,7 +119,7 @@ class Product {
       final querySnapshot = await FirebaseFirestore.instance
           .collection('reviews')
           .where('item_amazon_id', isEqualTo: productId)  // Lọc theo product_id
-          // .orderBy('review_time', descending: true)  // Sắp xếp theo review_time mới nhất
+          .orderBy('review_time', descending: true)  // Sắp xếp theo review_time mới nhất
           .get();
 
       return querySnapshot.docs.map((doc) => Review.fromFirestore(doc)).toList();
@@ -128,5 +130,4 @@ class Product {
   }
 
 }
-
 

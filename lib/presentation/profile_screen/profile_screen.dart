@@ -8,14 +8,14 @@ import 'package:permission_handler/permission_handler.dart';
 import 'package:untitled/core/app_export.dart';
 import 'package:untitled/model/user.dart';
 import 'package:untitled/presentation/orders_screen/my_order_screen.dart';
-import 'package:untitled/services/shop_service/shop_service.dart';
+import 'package:untitled/presentation/welcome_onboarding_screen/welcome_onboarding_screen.dart';
 import 'package:untitled/services/user_service.dart';
 import 'package:untitled/widgets/custom_elevated_button.dart';
-import 'package:untitled/presentation/welcome_onboarding_screen/welcome_onboarding_screen.dart';
-import '../../model/shop_model.dart';
+import '../shop_screen/store_screen.dart';
+
+
 import '../../widgets/custom_bottom_bar.dart';
 import '../orders_screen/edit_info.dart';
-import '../shop_screen/store_screen.dart';
 
 class ProfileScreen extends StatefulWidget {
   @override
@@ -43,62 +43,12 @@ class _ProfileScreenState extends State<ProfileScreen> {
 
   Future<void> _fetchUserProfile() async {
     try {
-      print(' userId $userId');
       final profile = await profileService.getUserProfile(userId);
       setState(() {
         userProfile = profile!;
       });
     } catch (e) {
       print('Error fetching user profile: $e');
-    }
-  }
-
-  File? _image;
-
-  Future<void> _requestPermission() async {
-    var status = await Permission.storage.request();
-    if (status.isGranted) {
-      _pickAndUploadImage(); // Gọi hàm chọn ảnh khi có quyền
-    } else {
-      print("Không có quyền truy cập bộ nhớ!");
-    }
-  }
-
-  Future<void> _pickAndUploadImage() async {
-    final picker = ImagePicker();
-    final pickedFile = await picker.pickImage(source: ImageSource.gallery);
-
-    if (pickedFile != null) {
-      File imageFile = File(pickedFile.path);
-
-      // Tạo đường dẫn lưu trữ ảnh trên Firebase Storage
-      String fileName =
-          'avatars/${DateTime.now().millisecondsSinceEpoch}${userProfile.uid}.png';
-      Reference storageRef = FirebaseStorage.instance.ref().child(fileName);
-
-      // Upload ảnh lên Firebase Storage
-      UploadTask uploadTask = storageRef.putFile(imageFile);
-      TaskSnapshot taskSnapshot = await uploadTask;
-
-      // Lấy URL ảnh đã upload
-      String imageUrl = await taskSnapshot.ref.getDownloadURL();
-
-      // Lưu URL ảnh vào Firestore
-      await FirebaseFirestore.instance
-          .collection('users')
-          .doc('${userProfile.uid}')
-          .update({
-        'avatar_link': imageUrl,
-      });
-
-      setState(() {
-        userProfile.avatar_link = imageUrl;
-        _image = imageFile;
-      });
-
-      print("Ảnh đã được upload và URL là: $imageUrl");
-    } else {
-      print('Không có ảnh nào được chọn');
     }
   }
 
@@ -118,22 +68,15 @@ class _ProfileScreenState extends State<ProfileScreen> {
             // Header
             Container(
               padding:
-                  EdgeInsets.only(top: 60, left: 20, right: 20, bottom: 14),
+              EdgeInsets.only(top: 60, left: 20, right: 20, bottom: 14),
               color: Colors.white, // Màu nền header
               child: Row(
                 children: [
                   CircleAvatar(
-                    radius: 50,
-                    child: userProfile.avatar_link != ''
-                        ? Image.network(userProfile.avatar_link!)
-                        : IconButton(
-                            onPressed: () {
-                              _requestPermission();
-                            },
-                            icon: Icon(
-                              Icons.add_a_photo_outlined,
-                            ),
-                          ),
+                    child: userProfile.name != null && userProfile.name!.isNotEmpty
+                        ? Text(userProfile.name![0].toUpperCase())
+                        : Icon(Icons.person), // Hiển thị icon mặc định khi name null
+                    radius: 40.h,
                   ),
                   SizedBox(width: 20),
                   Column(
@@ -148,7 +91,7 @@ class _ProfileScreenState extends State<ProfileScreen> {
                               .copyWith(fontSize: 20)),
                       Container(
                         padding:
-                            EdgeInsets.symmetric(horizontal: 8, vertical: 4),
+                        EdgeInsets.symmetric(horizontal: 8, vertical: 4),
                         decoration: BoxDecoration(
                           color: Color(0xFFA88A5E),
                           borderRadius: BorderRadius.circular(20),
@@ -171,8 +114,8 @@ class _ProfileScreenState extends State<ProfileScreen> {
                               context,
                               MaterialPageRoute(
                                   builder: (context) => EditInfo(
-                                        user: userProfile,
-                                      )));
+                                    user: userProfile,
+                                  )));
                         },
                         child: Text(
                           'Edit Profile >',
@@ -267,27 +210,11 @@ class _ProfileScreenState extends State<ProfileScreen> {
                 padding: const EdgeInsets.all(8.0),
                 child: CustomElevatedButton(
                     text: 'View Store', onPressed: (){
-
-                      // ShopService().createShop(ShopModel(id: userProfile.uid!, name: userProfile.name!));
-                      Navigator.push(context, MaterialPageRoute(builder: (context) => StoreScreen(user: userProfile,)));
+                  // ShopService().createShop(ShopModel(id: userProfile.uid!, name: userProfile.name!));
+                  Navigator.push(context, MaterialPageRoute(builder: (context) => StoreScreen(user: userProfile,)));
                 }),
               ),
             // Upgrade Button
-
-            // if (userProfile.isSeller == false)
-            //   Padding(
-            //     padding: const EdgeInsets.all(8.0),
-            //     child:
-            //         CustomElevatedButton(text: 'Upgrade To Business Account', onPressed: (){
-            //           ShopModel shopModel = ShopModel(id: userProfile.uid!, name: userProfile.name!);
-            //           setState(() {
-            //             userProfile.isSeller = true;
-            //           });
-            //
-            //           profileService.updateUserProfile(userId, {'isSeller': true});
-            //           ShopService().createShop(shopModel);
-            //         },),
-            //   ),
             SizedBox(height: 110),
 
             TextButton(
@@ -373,7 +300,7 @@ class GridItem extends StatelessWidget {
             backgroundColor: Color(0xFFFFD59E),
             radius: 18,
             child:
-                Icon(icon, color: LightCodeColors().deepPurpleA200, size: 20),
+            Icon(icon, color: LightCodeColors().deepPurpleA200, size: 20),
           ),
           SizedBox(width: 4),
           Text(

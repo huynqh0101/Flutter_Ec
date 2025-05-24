@@ -50,7 +50,7 @@ class _EditInfoState extends State<EditInfo> {
     addressRepository = AddressRepository();
     _getCurrentAddress();
 
-    // _loadProvinces();
+    _loadProvinces();
   }
 
   Future<void> _getCurrentAddress() async {

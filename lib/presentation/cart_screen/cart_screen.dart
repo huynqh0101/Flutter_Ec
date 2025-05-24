@@ -6,6 +6,7 @@ import 'package:untitled/widgets/custom_elevated_button.dart';
 
 import '../../model/Cart/cart_item.dart';
 import '../../model/product.dart';
+import '../../services/stripe_service.dart';
 
 class CartScreen extends StatefulWidget {
   // const CartScreen({super.key, required this.product});
@@ -20,8 +21,6 @@ class _CartScreenState extends State<CartScreen> {
   late AuthService authService;
 
   var userId = AuthService().getCurrentUser()!.uid;
-
-  // var userId = 'hcVXheLM9Jc0uSuHszIl27v3ugj1';
   late Future<List<CartItem>> _listCartItems;
   late List<CartItem> listSelectItem;
 
@@ -68,7 +67,6 @@ class _CartScreenState extends State<CartScreen> {
         }
       }
     }
-    print('list${listSelectItem.length}');
     return total;
   }
 
@@ -241,16 +239,28 @@ class _CartScreenState extends State<CartScreen> {
                         ),
                         ElevatedButton(
                           onPressed: () {
-                            cartService.setListSelectItem(listSelectItem);
-                            print(cartService.getListSelectItem().length);
-                            print(listSelectItem.length);
-                            Navigator.push(
+                            if (listSelectItem.isEmpty) {
+                              // Hiển thị thông báo cho người dùng
+                              ScaffoldMessenger.of(context).showSnackBar(
+                                SnackBar(
+                                  content: Text('Please select at least one product before placing an order!'),
+                                  duration: Duration(seconds: 2),
+                                ),
+                              );
+                            } else {
+                              cartService.setListSelectItem(listSelectItem);
+                              Navigator.push(
                                 context,
                                 MaterialPageRoute(
-                                    builder: (context) => OrderScreen(
-                                      items: listSelectItem,
-                                    )));
+                                  builder: (context) => OrderScreen(
+                                    items: listSelectItem,
+                                  ),
+                                ),
+                              );
+                              // StripeService.instance.makePayment();
+                            }
                           },
+
                           child: Text(
                             'Buy',
                             style: CustomTextStyles.titleProductBlack
