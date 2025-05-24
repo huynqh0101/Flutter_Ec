@@ -90,7 +90,6 @@ class AuthService extends ChangeNotifier {
   Future<void> signOut() async {
     try {
       await _auth.signOut();
-      notifyListeners();
     } catch (e) {
       throw 'An error occurred while signing out';
     }
@@ -150,5 +149,17 @@ class AuthService extends ChangeNotifier {
     }
   }
 
-  sendPasswordResetEmail(String email) {}
+  Future<void> sendPasswordResetEmail(String email) async {
+    try {
+      await _auth.sendPasswordResetEmail(email: email);
+      print('Password reset email sent to $email');
+    } on FirebaseAuthException catch (e) {
+      if (e.code == 'invalid-email') {
+        throw 'The email address is badly formatted.';
+      } else if (e.code == 'user-not-found') {
+        throw 'No user found for that email.';
+      }
+      throw e.message ?? 'An error occurred while resetting password';
+    }
+  }
 }

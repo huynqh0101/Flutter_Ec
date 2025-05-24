@@ -1,7 +1,10 @@
+import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
 import 'package:untitled/core/app_export.dart';
+import 'package:untitled/model/Cart/cart_item.dart';
 import 'package:untitled/model/product.dart';
+import 'package:untitled/presentation/sign_in_screen/sign_in_screen.dart';
 import 'package:untitled/services/cart_service.dart';
 import 'package:untitled/services/product_service.dart';
 import 'package:untitled/theme/custom_text_style.dart';
@@ -9,9 +12,16 @@ import 'package:untitled/widgets/custom_elevated_button.dart';
 import 'package:untitled/widgets/custom_rating_bar.dart';
 import 'package:untitled/widgets/product_card.dart';
 import '../../model/reviews.dart';
+import '../../model/user.dart';
+import '../../services/my_order_service.dart';
+import '../../services/user_service.dart';
 import '../../widgets/custom_bottom_bar.dart';
 import '../../widgets/custom_text_form_field.dart';
 import '../home_screen/provider/home_screen_provider.dart';
+import '../home_screen/search_screen.dart';
+import 'package:intl/intl.dart';
+
+import '../orders_screen/order_screen.dart';
 
 class ProductDetailScreen extends StatefulWidget {
   const ProductDetailScreen({super.key, required this.product});
@@ -29,27 +39,53 @@ class _ProductDetailScreenState extends State<ProductDetailScreen> {
   late Future<List<Review>> reviewsFuture;
   late Future<List<Product>> relatedProductFuture;
   late Future<List<Product>> firestoreProductList;
+  String? userName;
   late CartService cartService;
   var userId;
-
 
   @override
   void initState() {
     super.initState();
     reviewsFuture = widget.product.fetchAllReviews(widget.product.product_id);
     relatedProductFuture = widget.product.fetchRelatedProducts(widget.product.product_id);
-
-    // Giả sử bạn lấy dữ liệu sản phẩm liên quan từ Firestore hoặc API
-
     firestoreProductList = ProductService().fetchAllProducts();
     userId = AuthService().getCurrentUser()?.uid;
     cartService = CartService();
 
+    // Move async operation to separate method
+    _loadUsername();
   }
 
-  Future<List<Product>> fetchRelatedProducts() async {
-    final products = await firestoreProductList;
-    return products.take(10).toList();
+  Future<void> _loadUsername() async {
+    userName = await getUsernameFromUserId(userId);
+    print("username ${userName}");
+    if (mounted) {
+      setState(() {});
+    }
+  }
+
+
+  Future<String?> getUsernameFromUserId(String userId) async {
+    try {
+      // Truy vấn Firestore để lấy dữ liệu người dùng từ userId
+      DocumentSnapshot userDoc = await FirebaseFirestore.instance
+          .collection('users')  // Thay đổi tên collection nếu cần
+          .doc(userId)
+          .get();
+
+      // Kiểm tra nếu document tồn tại
+      if (userDoc.exists) {
+        // Lấy thông tin 'username' từ document
+        String username = userDoc.get('name');  // Thay 'username' bằng trường trong Firestore của bạn
+        return username;
+      } else {
+        print("User not found");
+        return null;
+      }
+    } catch (e) {
+      print("Error getting username: $e");
+      return null;
+    }
   }
 
   int quantity = 1;
@@ -126,9 +162,9 @@ class _ProductDetailScreenState extends State<ProductDetailScreen> {
                       Text(
                         '\$ ${widget.product.actual_price}',
                         style: TextStyle(
-                          decoration: TextDecoration.lineThrough,
-                          color: Colors.white,
-                          fontSize: 20.h
+                            decoration: TextDecoration.lineThrough,
+                            color: Colors.white,
+                            fontSize: 20.h
                         ),
                       ),
                       const Spacer(),
@@ -169,7 +205,7 @@ class _ProductDetailScreenState extends State<ProductDetailScreen> {
                       Text(
                         '${widget.product.rating}',
                         style:
-                            TextStyle(fontSize: 16, color: appTheme.orangeA200),
+                        TextStyle(fontSize: 16, color: appTheme.orangeA200),
                       ),
                       CustomRatingBar(
                         ignoreGestures: true,
@@ -213,7 +249,7 @@ class _ProductDetailScreenState extends State<ProductDetailScreen> {
                               child: Row(
                                 // mainAxisAlignment: MainAxisAlignment.center,
                                 mainAxisAlignment:
-                                    MainAxisAlignment.spaceEvenly,
+                                MainAxisAlignment.spaceEvenly,
 
                                 crossAxisAlignment: CrossAxisAlignment.center,
                                 children: [
@@ -243,31 +279,46 @@ class _ProductDetailScreenState extends State<ProductDetailScreen> {
                   Row(
                     children: [
                       Expanded(
-                          child: ElevatedButton(
-                        onPressed: () {
-                          cartService.addToCart(widget.product, userId, quantity);
-
-                        },
-                        style: ElevatedButton.styleFrom(
-                          backgroundColor: LightCodeColors().deepPurpleA200,
-                          minimumSize: Size(3.h, 60.h),
+                        child: ElevatedButton(
+                          onPressed: () {
+                            cartService.addToCart(widget.product, userId, quantity);
+                          },
+                          style: ElevatedButton.styleFrom(
+                            backgroundColor: LightCodeColors().deepPurpleA200,
+                            minimumSize: Size(3.h, 60.h),
+                          ),
+                          child: Text(
+                            'Add to cart',
+                            style: TextStyle(color: Colors.white),
+                          ),
                         ),
-                        child: Text(
-                          'Add to cart',
-                          style: TextStyle(color: Colors.white),
-                        ),
-                      )),
+                      ),
                       SizedBox(width: 16),
                       Expanded(
-                        child: Expanded(
-                          child: CustomElevatedButton(
-                            onPressed: () {},
-                            text: 'Buy now',
-                          ),
+                        child: CustomElevatedButton(
+                          onPressed: () {
+                            // Check if the user is logged in
+                            if (userId == null || userId.isEmpty) {
+                              // User is not logged in, navigate to the login screen
+                              Navigator.push(
+                                context,
+                                MaterialPageRoute(builder: (context) => SignInScreen()),
+                              );
+                            } else {
+                              // User is logged in, proceed with the buy now functionality
+                              // Navigate to the purchase page (replace this with your actual purchase page)
+                              Navigator.push(
+                                context,
+                                MaterialPageRoute(builder: (context) => OrderScreen(items: [CartItem(productId: widget.product.product_id, productName: widget.product.product_name, imageUrl: widget.product.img_link, price: widget.product.discounted_price)],)),
+                              );
+                            }
+                          },
+                          text: 'Buy now',
                         ),
                       ),
                     ],
                   ),
+
                   const SizedBox(height: 16),
 
                   // Product Details
@@ -303,7 +354,7 @@ class _ProductDetailScreenState extends State<ProductDetailScreen> {
                           widget.product.about_product,
                           maxLines: isExpandedDetails ? null : 3,
                           overflow:
-                              isExpandedDetails ? null : TextOverflow.ellipsis,
+                          isExpandedDetails ? null : TextOverflow.ellipsis,
                         ),
                         if (!isExpandedDetails)
                           TextButton(
@@ -321,7 +372,30 @@ class _ProductDetailScreenState extends State<ProductDetailScreen> {
                     ),
                   ),
 
+                  const Text(
+                    'Write a Review',
+                    style: TextStyle(fontSize: 18, fontWeight: FontWeight.bold),
+                  ),
                   // Customer Reviews
+                  Container(
+                    padding: EdgeInsets.all(2),
+                    child: FutureBuilder<Widget>(
+                      future: _buildReviewForm(context), // Call your async method here
+                      builder: (context, snapshot) {
+                        if (snapshot.connectionState == ConnectionState.waiting) {
+                          return Center(child: CircularProgressIndicator()); // Show loading while waiting for result
+                        } else if (snapshot.hasError) {
+                          return Center(child: Text('Error: ${snapshot.error}')); // Show error if any
+                        } else if (snapshot.hasData) {
+                          return snapshot.data!; // Return the Widget when Future is completed
+                        } else {
+                          return Center(child: Text('No data available'));
+                        }
+                      },
+                    ),
+                  ),
+
+
                   Container(
                       padding: EdgeInsets.all(2), child: Customer_review()),
 
@@ -356,6 +430,9 @@ class _ProductDetailScreenState extends State<ProductDetailScreen> {
             contentPadding:
             EdgeInsets.symmetric(horizontal: 12.h, vertical: 6.h),
             controller: searchController,
+            onTap: () {
+              Navigator.push(context, MaterialPageRoute(builder: (context) => SearchScreen()));
+            },
           );
         },
       ),
@@ -425,35 +502,86 @@ class _ProductDetailScreenState extends State<ProductDetailScreen> {
   Widget _buildReviewItem(Review review) {
     return Padding(
       padding: EdgeInsets.symmetric(vertical: 8.0),
-      child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
-        Row(crossAxisAlignment: CrossAxisAlignment.center, children: [
-          CircleAvatar(
-            child: Text(review.review_name[0].toUpperCase()),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Row(
+            mainAxisAlignment: MainAxisAlignment.spaceBetween,
+            children: [
+              Row(
+                children: [
+                  CustomRatingBar(
+                    ignoreGestures: true,
+                    initialRating: review.rating,
+                    color: appTheme.orangeA200,
+                    itemSize: 20.h,
+                  ),
+                  SizedBox(width: 8),
+                  Text(
+                    review.rating.toString(),  // Display the rating number next to the RatingBar
+                    style: CustomTextStyles.titleProductBlack.copyWith(
+                      fontWeight: FontWeight.normal,
+                      fontSize: 14,
+                      color: appTheme.orangeA200,
+                    ),
+                  ),
+                ],
+              ),
+              Text(
+                DateFormat('dd-MM-yyyy').format(review.review_time),
+                style: CustomTextStyles.titleProductBlack.copyWith(fontWeight: FontWeight.normal),
+              ),
+            ],
           ),
-          SizedBox(
-            width: 12,
+          SizedBox(height: 8.h),
+          Row(
+            crossAxisAlignment: CrossAxisAlignment.center,
+            children: [
+              CircleAvatar(
+                child: Text(review.review_name[0].toUpperCase()),
+              ),
+              SizedBox(width: 12),
+              Text(
+                review.review_name,
+                style: CustomTextStyles.titleProductBlack.copyWith(fontWeight: FontWeight.normal),
+              ),
+            ],
           ),
-          Text(review.review_name,
-              style: CustomTextStyles.titleProductBlack
-                  .copyWith(fontWeight: FontWeight.normal)),
-        ]),
-        SizedBox(
-          height: 9,
-        ),
-        Column(
-          crossAxisAlignment: CrossAxisAlignment.start,
-          children: [
-            Text(review.review_title,
-                style: CustomTextStyles.titleProductBlack),
-            SizedBox(height: 4),
-            Text(review.review_content,
-                style: CustomTextStyles.bodyMediumGray200
-                    .copyWith(color: Colors.black)),
-          ],
-        ),
-      ]),
+          SizedBox(height: 9),
+          Column(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              Text(
+                review.review_title,
+                style: CustomTextStyles.titleProductBlack,
+              ),
+              SizedBox(height: 4),
+              // Use ExpansionTile to toggle the full content visibility
+              ExpansionTile(
+                title: Text(
+                  review.review_content,
+                  style: CustomTextStyles.bodyMediumGray200.copyWith(color: Colors.black),
+                  maxLines: 3,  // Limit the review content to 3 lines
+                  overflow: TextOverflow.ellipsis,  // Use ellipsis for overflow text
+                ),
+                children: [
+                  Padding(
+                    padding: const EdgeInsets.symmetric(vertical: 8.0),
+                    child: Text(
+                      review.review_content,
+                      style: CustomTextStyles.bodyMediumGray200.copyWith(color: Colors.black),
+                    ),
+                  ),
+                ],
+              ),
+            ],
+          ),
+        ],
+      ),
     );
   }
+
+
 
   Widget _buildRelatedProductItem(Product product) {
     return FutureBuilder<List<Product>>(
@@ -496,6 +624,163 @@ class _ProductDetailScreenState extends State<ProductDetailScreen> {
         }
       },
     );
+  }
+
+  Future<Widget> _buildReviewForm(BuildContext context) async {
+    final TextEditingController reviewTitleController = TextEditingController();
+    final TextEditingController reviewContentController = TextEditingController();
+    double rating = 0.0;
+
+    if (userId == null) {
+      return Center(
+        child: Text(
+          'Please log in to write a review.',
+          style: TextStyle(fontSize: 16, color: Colors.grey),
+        ),
+      );
+    }
+
+    if (!(await MyOrderService().hasUserPurchasedProduct(userId, widget.product.product_id))) {
+      return Center(
+        child: Text(
+          'Please buy product to write a review.',
+          style: TextStyle(fontSize: 16, color: Colors.grey),
+        ),
+      );
+    }
+
+    return Padding(
+      padding: const EdgeInsets.all(0.0),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          // Rating Section
+          Row(
+            children: [
+              Text(
+                'Rating: ',
+                style: CustomTextStyles.labelLargePrimary.copyWith(fontSize: 20),
+              ),
+              CustomRatingBar(
+                itemSize: 20,
+                onRatingUpdate: (newRating) {
+                  rating = newRating;
+                },
+                color: appTheme.orangeA200,
+              ),
+              Spacer(),
+            ],
+          ),
+          const SizedBox(height: 8),
+
+          // Title Input
+          TextField(
+            controller: reviewTitleController,
+            decoration: const InputDecoration(
+              labelText: 'Review Title',
+              border: OutlineInputBorder(),
+            ),
+          ),
+          const SizedBox(height: 8),
+
+          // Content Input
+          TextField(
+            controller: reviewContentController,
+            decoration: const InputDecoration(
+              labelText: 'Review Content',
+              border: OutlineInputBorder(),
+            ),
+            maxLines: 2,
+          ),
+          const SizedBox(height: 8),
+
+          // Submit Button
+          CustomElevatedButton(
+            text: 'Submit Review',
+            onPressed: () {
+              if (reviewTitleController.text.isNotEmpty &&
+                  reviewContentController.text.isNotEmpty &&
+                  rating > 0) {
+                // Assuming you have a function to handle review submission
+                _submitReview(
+                  reviewTitleController.text,
+                  reviewContentController.text,
+                  rating,
+                );
+                // Clear the input fields after submission
+                reviewTitleController.clear();
+                reviewContentController.clear();
+              } else {
+                // Show a message if validation fails
+                ScaffoldMessenger.of(context).showSnackBar(
+                  SnackBar(
+                    content: Text('Please fill all fields and provide a rating.'),
+                  ),
+                );
+              }
+            },
+          ),
+        ],
+      ),
+    );
+  }
+
+
+// This function would handle the review submission, like storing the review in Firestore or a backend
+  void _submitReview(String title, String content, double rating) async {
+    // Tạo review mới
+    Review newReview = Review(
+      review_name: userName!, // Thay bằng tên người dùng thực tế
+      review_title: title,
+      review_content: content,
+      review_time: DateTime.now(),
+      rating: rating,
+      user_id: userId,
+      product_id: widget.product.product_id,
+    );
+
+    try {
+      // Thêm review vào Firestore
+      FirebaseFirestore.instance.collection('new_reviews').add({
+        'review_name': newReview.review_name,
+        'review_title': newReview.review_title,
+        'review_content': newReview.review_content,
+        'rating': newReview.rating,
+        'user_id': newReview.user_id,
+        'product_id': newReview.product_id,
+        'review_time': newReview.review_time.toIso8601String(),
+      }).then((value) {
+        print("Review added successfully");
+      }).catchError((error) {
+        print("Failed to add review: $error");
+      });
+    } catch (e) {
+      print("Error adding review: $e");
+    }
+
+    try {
+      // Chuyển đổi review_time thành Unix timestamp (milliseconds since epoch)
+      int reviewTimeInMilliseconds = newReview.review_time.millisecondsSinceEpoch;
+
+      // Thêm review vào Firestore
+      FirebaseFirestore.instance.collection('reviews').add({
+        'user_name': newReview.review_name,
+        'summary': newReview.review_title,
+        'review_text': newReview.review_content,
+        'rating': newReview.rating,
+        'user_amazon_id': newReview.user_id,
+        'item_amazon_id': newReview.product_id,
+        'review_time': reviewTimeInMilliseconds,  // Lưu dưới dạng milliseconds
+      }).then((value) {
+        print("Review added successfully");
+      }).catchError((error) {
+        print("Failed to add review: $error");
+      });
+    } catch (e) {
+      print("Error adding review: $e");
+    }
+
+
   }
 
 

@@ -21,8 +21,15 @@ class _ForgotPasswordScreenState extends State<ForgotPasswordScreen> {
       final email = _emailController.text.trim();
 
       try {
+        showDialog(
+          context: context,
+          barrierDismissible: false,
+          builder: (context) => const Center(child: CircularProgressIndicator()),
+        );
+        print("Đang gửi yêu cầu đặt lại mật khẩu đến: $email");
         // Gửi yêu cầu reset password
         await authService.resetPassword(email);
+        print("Đã gửi email đặt lại mật khẩu thành công");
 
         // Hiển thị dialog thành công
         await showDialog(
@@ -70,19 +77,19 @@ class _ForgotPasswordScreenState extends State<ForgotPasswordScreen> {
 
                   // Nút Done
                   CustomElevatedButton(
-                    onPressed: () {
-                      Navigator.of(context).pop();
-                    },
-                    buttonStyle: ElevatedButton.styleFrom(
-                      shape: RoundedRectangleBorder(
-                        borderRadius: BorderRadius.circular(16.h),
+                      onPressed: () {
+                        Navigator.of(context).pop();
+                      },
+                      buttonStyle: ElevatedButton.styleFrom(
+                        shape: RoundedRectangleBorder(
+                          borderRadius: BorderRadius.circular(16.h),
+                        ),
+                        padding: const EdgeInsets.symmetric(
+                          vertical: 14,
+                          horizontal: 32,
+                        ),
                       ),
-                      padding: const EdgeInsets.symmetric(
-                        vertical: 14,
-                        horizontal: 32,
-                      ),
-                    ),
-                    text: "Done"
+                      text: "Done"
                   ),
                   const SizedBox(height: 16),
 
