@@ -11,6 +11,7 @@ import '../presentation/sign_in_screen/sign_in_screen.dart';
 import '../presentation/sign_up_screen/sign_up_screen.dart';
 import '../presentation/home_screen/home_screen.dart';
 import '../presentation/forgot_password_screen/forgot_password.dart';
+import '../presentation/menu_screen/menu_screen.dart';
 
 import 'package:flutter/cupertino.dart';
 
@@ -35,7 +36,10 @@ class AppRoutes {
 
   static const String profileScreen = '/profile_screen';
 
+  static const String menuScreen = '/menu_screen';
+
   static Map<String, WidgetBuilder> routes = {
+    menuScreen: (context) => MenuScreen(),
     initialRoute: (context) => const SplashScreen(),
     splashScreen: (context) => const SplashScreen(),
     signInScreen: (context) => const SignInScreen(),

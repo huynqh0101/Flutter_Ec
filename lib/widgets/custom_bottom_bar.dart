@@ -54,7 +54,7 @@ class CustomBottomBarState extends State<CustomBottomBar> {
       case BottomBarEnum.Account:
         return AppRoutes.profileScreen;
       case BottomBarEnum.Menu:
-        return "";
+        return AppRoutes.menuScreen;
       default:
         return AppRoutes.homeScreen; // Mặc định nếu không có
     }

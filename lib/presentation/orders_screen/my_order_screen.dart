@@ -164,19 +164,21 @@ class MyOrderScreen extends StatelessWidget {
       onTap: () async {
         try {
           // Fetch product by ID
-          Product product = await ProductService().fetchProductById(cartItem.productId);
+          if (cartItem.productId != null) {
+            Product product = await ProductService().fetchProductById(cartItem.productId);
 
-          if (product != null) {
-            // Navigate to DetailScreen with the Product
-            Navigator.push(
-              context, // This is the correct use of context within the build method
-              MaterialPageRoute(
-                builder: (context) => ProductDetailScreen(product: product),
-              ),
-            );
-          } else {
-            // Handle the case where product is not found
-            print('Product not found');
+            if (product != null) {
+              // Navigate to DetailScreen with the Product
+              Navigator.push(
+                context,
+                MaterialPageRoute(
+                  builder: (context) => ProductDetailScreen(product: product),
+                ),
+              );
+            } else {
+              // Handle the case where product is not found
+              print('Product not found');
+            }
           }
         } catch (e) {
           // Handle any errors that might occur during the fetch
@@ -194,7 +196,7 @@ class MyOrderScreen extends StatelessWidget {
             decoration: BoxDecoration(
               borderRadius: BorderRadius.circular(8),
               image: DecorationImage(
-                image: NetworkImage(cartItem.imageUrl),
+                image: NetworkImage(cartItem.imageUrl ?? ''), // Add null check
                 fit: BoxFit.cover,
               ),
             ),
@@ -206,7 +208,7 @@ class MyOrderScreen extends StatelessWidget {
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
                 Text(
-                  cartItem.productName,
+                  cartItem.productName ?? 'Unnamed Product', // Add null check
                   style: TextStyle(fontWeight: FontWeight.bold, fontSize: 14),
                   maxLines: 2,
                   overflow: TextOverflow.ellipsis,
@@ -218,7 +220,7 @@ class MyOrderScreen extends StatelessWidget {
                     Column(
                       children: [
                         Text(
-                          "\$${cartItem.price}",
+                          "\$${cartItem.price ?? 0}", // Add null check
                           style: TextStyle(
                             fontWeight: FontWeight.bold,
                             color: Colors.red,
@@ -227,7 +229,7 @@ class MyOrderScreen extends StatelessWidget {
                         ),
                       ],
                     ),
-                    Text("x${cartItem.quantity}"),
+                    Text("x${cartItem.quantity ?? 1}"), // Add null check
                   ],
                 ),
               ],

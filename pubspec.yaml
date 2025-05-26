@@ -80,6 +80,11 @@ flutter:
   assets:
     - lib/assets/icons/
     - lib/assets/images/
+    - lib/assets/recommendations/
+    - lib/assets/recommendations/default_recommendations.json
+    - lib/assets/recommendations/user_1_recommendations.json
+    - lib/assets/recommendations/user_2_recommendations.json
+    - lib/assets/recommendations/user_3_recommendations.json
     - lib/assets/images/logo.svg
     - lib/assets/images/banner1.png
     - lib/assets/images/default_ava.svg

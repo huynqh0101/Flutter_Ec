@@ -127,30 +127,60 @@ class _AddProductScreenState extends State<AddProductScreen> {
   }
 
   // Handle the form submission and add the product
-  void _submitProduct() {
-    String productName = _productNameController.text;
-    double price = double.parse(_priceController.text);
-    String description = _descriptionController.text;
-    String imgLink = _imgLinkController.text;
-    String category = _selectedCategory ?? 'Electronics'; // Default category
+  Future<void> _submitProduct() async {
+    try {
+      // Hiển thị loading indicator
+      showDialog(
+        context: context,
+        barrierDismissible: false,
+        builder: (BuildContext context) {
+          return const Center(child: CircularProgressIndicator());
+        },
+      );
 
-    Product product = Product(
-      product_id: '',
-      product_name: productName,
-      brand: '',
-      about_product: description,
-      actual_price: price,
-      discounted_price: 0,
-      rating: 0,
-      rating_count: 0,
-      discount_percentage: 0,
-      img_link: imgLink,
-      category: category,
-      related_product: [],
-    );
+      String productName = _productNameController.text;
+      double price = double.parse(_priceController.text);
+      String description = _descriptionController.text;
+      String imgLink = _imgLinkController.text;
+      String category = _selectedCategory ?? 'Electronics'; // Default category
 
-    ProductService().addProduct(product);
+      Product product = Product(
+        product_id: '',
+        product_name: productName,
+        brand: '',
+        about_product: description,
+        actual_price: price,
+        discounted_price: 0,
+        rating: 0,
+        rating_count: 0,
+        discount_percentage: 0,
+        img_link: imgLink,
+        category: category,
+        related_product: [],
+        // Xóa dòng lower_title: productName.toLowerCase() ở đây
+      );
 
-    Navigator.pop(context);
+      // Sử dụng await để đợi thêm sản phẩm hoàn tất
+      await ProductService().addProduct(product);
+
+      // Đóng loading indicator
+      Navigator.pop(context);
+
+      // Hiển thị thông báo thành công
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(content: Text('Product added successfully!')),
+      );
+
+      // Quay lại màn hình trước đó
+      Navigator.pop(context);
+    } catch (e) {
+      // Đóng loading indicator nếu có lỗi
+      Navigator.pop(context);
+
+      // Hiển thị thông báo lỗi
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(content: Text('Error: ${e.toString()}')),
+      );
+    }
   }
 }

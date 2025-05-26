@@ -218,22 +218,30 @@ class ProductService {
 
   Future<void> addProduct(Product product) async {
     try {
-      // Thêm sản phẩm vào Firestore và lấy document ID
-      DocumentReference docRef =
-      await _firestore.collection('amazon_products').add({
+      // Chuẩn bị dữ liệu sản phẩm với trường lower_title
+      Map<String, dynamic> productData = {
         ...product.toMap(),
         'created_at': FieldValue.serverTimestamp(),
-      });
-      // Lấy product_id là ID của document vừa thêm
+        'lower_title': product.product_name.toLowerCase(), // Thêm trường này để hỗ trợ tìm kiếm
+      };
+
+      // Thêm sản phẩm vào Firestore và lấy document ID
+      DocumentReference docRef = await _firestore.collection('amazon_products').add(productData);
+
+      // Lấy ID của document vừa thêm
       String productId = docRef.id;
-      // Cập nhật lại product_id trong Firestore
+
+      // Cập nhật lại cả product_id và item_amazon_id
       await _firestore.collection('amazon_products').doc(productId).update({
+        'product_id': productId,
         'item_amazon_id': productId,
       });
+
       print("Product added with ID: $productId\n"
           "Product updated with name: ${product.product_name}");
     } catch (e) {
       print("Error adding product: $e");
+      throw e; // Ném lỗi để có thể xử lý ở phía gọi hàm
     }
   }
 
@@ -265,4 +273,199 @@ class ProductService {
     }
   }
 
+  Future<List<Product>> fetchLocalRecommendedProducts(String userId) async {
+  try {
+    print('Starting to fetch recommendations for user $userId');
+    String jsonPath = 'lib/assets/recommendations/${userId}_recommendations.json';
+    
+    try {
+      // Đọc file JSON
+      final String jsonContent = await rootBundle.loadString(jsonPath);
+      print('JSON file loaded: ${jsonPath}');
+      
+      final Map<String, dynamic> data = json.decode(jsonContent);
+      final recommendedList = data['recommended'] as List<dynamic>?;
+      
+      if (recommendedList != null && recommendedList.isNotEmpty) {
+        print('Found ${recommendedList.length} recommended IDs');
+        
+        // Lấy danh sách ID sản phẩm đề xuất
+        List<String> productIds = List<String>.from(recommendedList);
+        
+        // === THAY ĐỔI: TÌM KIẾM TỪNG SẢN PHẨM ===
+        final productsCollection = _firestore.collection('amazon_products');
+        List<Product> allRecommendedProducts = [];
+        
+        // Tìm kiếm từng sản phẩm một để debug kỹ
+        for (String id in productIds) {
+          try {
+            // Cách 1: Tìm theo document ID
+            var docSnapshot = await productsCollection.doc(id).get();
+            if (docSnapshot.exists) {
+              print('Found product with document ID: $id');
+              allRecommendedProducts.add(Product.fromFirestore(docSnapshot));
+              continue;
+            }
+            
+            // Cách 2: Tìm theo product_id field
+            var query1 = await productsCollection
+                .where('product_id', isEqualTo: id)
+                .limit(1)
+                .get();
+                
+            if (query1.docs.isNotEmpty) {
+              print('Found product with product_id field: $id');
+              allRecommendedProducts.add(Product.fromFirestore(query1.docs.first));
+              continue;
+            }
+            
+            // Cách 3: Tìm theo item_amazon_id field
+            var query2 = await productsCollection
+                .where('item_amazon_id', isEqualTo: id)
+                .limit(1)
+                .get();
+                
+            if (query2.docs.isNotEmpty) {
+              print('Found product with item_amazon_id field: $id');
+              allRecommendedProducts.add(Product.fromFirestore(query2.docs.first));
+              continue;
+            }
+            
+            // Nếu các cách trên đều không tìm thấy
+            print('Product with ID $id not found in any format');
+          } catch (e) {
+            print('Error searching for product $id: $e');
+          }
+          
+          // Nếu tìm được đủ 20 sản phẩm thì dừng
+          if (allRecommendedProducts.length >= 20) {
+            print('Found 20 products - stopping search');
+            break;
+          }
+        }
+        
+        print('Found a total of ${allRecommendedProducts.length} recommended products');
+        
+        // Nếu không tìm thấy sản phẩm nào, thử dùng sản phẩm phổ biến
+        if (allRecommendedProducts.isEmpty) {
+          print('No products found - falling back to trending products');
+          return await getTrendingProducts();
+        }
+        
+        return allRecommendedProducts;
+      }
+    } catch (e) {
+      print('Error processing recommendations: $e');
+    }
+    
+    // Fallback to default recommendations
+    print('Using default recommendations instead');
+    return await fetchLocalDefaultRecommendations();
+  } catch (e) {
+    print('Major error in fetchLocalRecommendedProducts: $e');
+    return await getTrendingProducts();
+  }
+}
+
+Future<List<Product>> fetchLocalDefaultRecommendations() async {
+  try {
+    // Đọc file đề xuất mặc định
+    final String jsonContent = await rootBundle.loadString('lib/assets/recommendations/default_recommendations.json');
+    final Map<String, dynamic> data = json.decode(jsonContent);
+    
+    if (data.containsKey('recommended') && data['recommended'].isNotEmpty) {
+      // Lấy danh sách ID sản phẩm đề xuất
+      List<String> productIds = List<String>.from(data['recommended']);
+      
+      final productsCollection = FirebaseFirestore.instance.collection('amazon_products');
+      List<Product> allRecommendedProducts = [];
+
+      // Chia nhỏ danh sách productIds thành các phần
+      const maxBatchSize = 10;
+      for (int i = 0; i < productIds.length; i += maxBatchSize) {
+        final batch = productIds.sublist(
+          i, 
+          i + maxBatchSize > productIds.length ? productIds.length : i + maxBatchSize
+        );
+        
+        // Thử tìm theo product_id trước
+        var querySnapshot = await productsCollection
+            .where('product_id', whereIn: batch)
+            .get();
+        
+        // Nếu không tìm thấy, thử tìm theo item_amazon_id
+        if (querySnapshot.docs.isEmpty) {
+          querySnapshot = await productsCollection
+              .where('item_amazon_id', whereIn: batch)
+              .get();
+        }
+        
+        allRecommendedProducts.addAll(querySnapshot.docs.map(
+          (doc) => Product.fromFirestore(doc)
+        ).toList());
+      }
+      
+      print('Đã tìm thấy ${allRecommendedProducts.length} sản phẩm đề xuất mặc định');
+      return allRecommendedProducts;
+    }
+    
+    // Nếu không có đề xuất mặc định, trả về sản phẩm trending
+    return await getTrendingProducts();
+  } catch (e) {
+    print('Error fetching default recommendations: $e');
+    return await getTrendingProducts();
+  }
+}
+
+Future<void> debugFirestoreProductStructure() async {
+  try {
+    final snapshot = await _firestore
+        .collection('amazon_products')
+        .limit(1)
+        .get();
+    
+    if (snapshot.docs.isNotEmpty) {
+      final doc = snapshot.docs.first;
+      print('===== PRODUCT STRUCTURE =====');
+      print('Document ID: ${doc.id}');
+      
+      Map<String, dynamic> data = doc.data();
+      data.forEach((key, value) {
+        print('$key: $value (${value.runtimeType})');
+      });
+      
+      print('===========================');
+    } else {
+      print('No products found in Firestore');
+    }
+  } catch (e) {
+    print('Error debugging Firestore: $e');
+  }
+}
+Future<void> debugRecommendationJsonStructure() async {
+  try {
+    String jsonPath = 'lib/assets/recommendations/user_1_recommendations.json';
+    
+    try {
+      final String jsonContent = await rootBundle.loadString(jsonPath);
+      print('JSON content loaded, length: ${jsonContent.length}');
+      
+      final Map<String, dynamic> data = json.decode(jsonContent);
+      final recommendedList = data['recommended'] as List<dynamic>?;
+      
+      if (recommendedList != null && recommendedList.isNotEmpty) {
+        print('IDs format in JSON:');
+        for (int i = 0; i < 5 && i < recommendedList.length; i++) {
+          print('${i+1}. ${recommendedList[i]} (${recommendedList[i].runtimeType})');
+        }
+      } else {
+        print('No recommended IDs found in JSON');
+      }
+    } catch (e) {
+      print('Error reading JSON: $e');
+    }
+  } catch (e) {
+    print('Error debugging JSON: $e');
+  }
+}
 }
