@@ -87,7 +87,7 @@ class _AfterOrderState extends State<AfterOrder> {
       ),
     );
   }
-
+//Builds a grid of related products
   Widget _buildRelatedProductItem() {
     return FutureBuilder<List<Product>>(
       future: fetchRelatedProducts(),
