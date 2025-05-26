@@ -31,7 +31,7 @@ class ProductDetailScreen extends StatefulWidget {
   @override
   State<ProductDetailScreen> createState() => _ProductDetailScreenState();
 }
-
+// This is the detail screen for a product, displaying its details, reviews, and related products.
 class _ProductDetailScreenState extends State<ProductDetailScreen> {
   bool isExpandedDetails = false;
   bool isExpandedReviews = false;
