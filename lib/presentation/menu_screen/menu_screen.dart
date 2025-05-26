@@ -1,7 +1,9 @@
 import 'package:flutter/material.dart';
 import 'package:untitled/core/app_export.dart';
 import 'package:untitled/model/product.dart';
-import 'package:untitled/services/product_service.dart'; // Thay đổi import này
+import 'package:untitled/presentation/detail_screen/detail_screen.dart';
+import 'package:untitled/services/product_service.dart';
+import 'package:untitled/widgets/custom_bottom_bar.dart'; // Add this import
 import 'dart:math';
 
 class MenuScreen extends StatefulWidget {
@@ -15,6 +17,7 @@ class _MenuScreenState extends State<MenuScreen> {
   bool isLoading = true;
   String selectedCategory = "All";
   List<String> categories = ["All", "Recommended"];
+  int _selectedIndex = 3; // Default to Menu tab (index 3)
   
   final ProductService _productService = ProductService(); // Sử dụng ProductService
 
@@ -146,10 +149,22 @@ class _MenuScreenState extends State<MenuScreen> {
           ),
         ],
       ),
+
+      bottomNavigationBar: CustomBottomBar(
+        selectedIndex: _selectedIndex,
+        onChanged: (BottomBarEnum type) {
+          // Navigation is handled inside CustomBottomBar
+        },
+        onSelectedIndexChanged: (index) {
+          setState(() {
+            _selectedIndex = index;
+          });
+        },
+      ),
     );
   }
 
-//Trả về danh sách snar phẩm đề xuất
+  //Trả về danh sách snar phẩm đề xuất
   List<Product> _getFilteredProducts() {
     if (selectedCategory == "All") {
       return products;
@@ -164,130 +179,144 @@ class _MenuScreenState extends State<MenuScreen> {
     bool isRecommended = recommendedProducts.any((p) => p.product_id == product.product_id) &&
         selectedCategory != "Recommended"; // Chỉ hiển thị badge khi không ở tab Recommended
 
-    return Card(
-      elevation: 2,
-      shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(10)),
-      child: Stack(
-        children: [
-          Column(
-            crossAxisAlignment: CrossAxisAlignment.start,
-            children: [
-              // Product image
-              Expanded(
-                flex: 3,
-                child: ClipRRect(
-                  borderRadius: BorderRadius.vertical(top: Radius.circular(10)),
-                  child: Image.network(
-                    product.img_link,
-                    fit: BoxFit.cover,
-                    width: double.infinity,
-                    errorBuilder: (context, error, stackTrace) {
-                      return Container(
-                        color: Colors.grey[300],
-                        child: Icon(Icons.image_not_supported, size: 50),
-                      );
-                    },
-                    loadingBuilder: (context, child, loadingProgress) {
-                      if (loadingProgress == null) return child;
-                      return Center(child: CircularProgressIndicator());
-                    },
+    return GestureDetector(
+      onTap: () {
+        // Navigate to the product detail screen when card is tapped
+        Navigator.push(
+          context,
+          MaterialPageRoute(
+            builder: (context) => ProductDetailScreen(product: product),
+          ),
+        );
+      },
+      child: Card(
+        elevation: 2,
+        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(10)),
+        child: Stack(
+          children: [
+            Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                // Product image
+                Expanded(
+                  flex: 3,
+                  child: ClipRRect(
+                    borderRadius: BorderRadius.vertical(top: Radius.circular(10)),
+                    child: Image.network(
+                      product.img_link,
+                      fit: BoxFit.cover,
+                      width: double.infinity,
+                      errorBuilder: (context, error, stackTrace) {
+                        return Container(
+                          color: Colors.grey[300],
+                          child: Icon(Icons.image_not_supported, size: 50),
+                        );
+                      },
+                      loadingBuilder: (context, child, loadingProgress) {
+                        if (loadingProgress == null) return child;
+                        return Center(child: CircularProgressIndicator());
+                      },
+                    ),
                   ),
                 ),
-              ),
 
-              // Product details
-              Expanded(
-                flex: 2,
-                child: Padding(
-                  padding: EdgeInsets.all(8),
-                  child: Column(
-                    crossAxisAlignment: CrossAxisAlignment.start,
-                    mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                    children: [
-                      // Product name
-                      Text(
-                        product.product_name,
-                        maxLines: 2,
-                        overflow: TextOverflow.ellipsis,
-                        style: TextStyle(fontWeight: FontWeight.bold, fontSize: 12),
-                      ),
+                // Product details
+                Expanded(
+                  flex: 2,
+                  child: Padding(
+                    padding: EdgeInsets.all(8),
+                    child: Column(
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                      children: [
+                        // Product name
+                        Text(
+                          product.product_name,
+                          maxLines: 2,
+                          overflow: TextOverflow.ellipsis,
+                          style: TextStyle(fontWeight: FontWeight.bold, fontSize: 12),
+                        ),
 
-                      // Pricing and rating
-                      Row(
-                        mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                        children: [
-                          Column(
-                            crossAxisAlignment: CrossAxisAlignment.start,
-                            children: [
-                              Text(
-                                "₹${product.discounted_price.toStringAsFixed(0)}",
-                                style: TextStyle(
-                                  fontWeight: FontWeight.bold,
-                                  color: Colors.red,
-                                ),
-                              ),
-                              if (product.actual_price > product.discounted_price)
+                        // Pricing and rating
+                        Row(
+                          mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                          children: [
+                            Column(
+                              crossAxisAlignment: CrossAxisAlignment.start,
+                              children: [
                                 Text(
-                                  "₹${product.actual_price.toStringAsFixed(0)}",
+                                  "₹${product.discounted_price.toStringAsFixed(0)}",
                                   style: TextStyle(
-                                    decoration: TextDecoration.lineThrough,
-                                    fontSize: 12,
-                                    color: Colors.grey,
+                                    fontWeight: FontWeight.bold,
+                                    color: Colors.red,
                                   ),
                                 ),
-                            ],
-                          ),
-                          Row(
-                            children: [
-                              Icon(Icons.star, color: Colors.amber, size: 14),
-                              Text(
-                                product.rating.toStringAsFixed(1),
-                                style: TextStyle(fontSize: 12),
-                              ),
-                            ],
-                          ),
-                        ],
+                                if (product.actual_price > product.discounted_price)
+                                  Text(
+                                    "₹${product.actual_price.toStringAsFixed(0)}",
+                                    style: TextStyle(
+                                      decoration: TextDecoration.lineThrough,
+                                      fontSize: 12,
+                                      color: Colors.grey,
+                                    ),
+                                  ),
+                              ],
+                            ),
+                            Row(
+                              children: [
+                                Icon(Icons.star, color: Colors.amber, size: 14),
+                                Text(
+                                  product.rating.toStringAsFixed(1),
+                                  style: TextStyle(fontSize: 12),
+                                ),
+                              ],
+                            ),
+                          ],
+                        ),
+                      ],
+                    ),
+                  ),
+                ),
+              ],
+            ),
+
+            // Badge cho sản phẩm đề xuất
+            if (isRecommended)
+              Positioned(
+                top: 0,
+                right: 0,
+                child: Container(
+                  padding: EdgeInsets.symmetric(horizontal: 8, vertical: 4),
+                  decoration: BoxDecoration(
+                    color: Colors.amber,
+                    borderRadius: BorderRadius.only(
+                      topRight: Radius.circular(10),
+                      bottomLeft: Radius.circular(10),
+                    ),
+                  ),
+                  child: Row(
+                    mainAxisSize: MainAxisSize.min,
+                    children: [
+                      Icon(Icons.thumb_up, color: Colors.white, size: 12),
+                      SizedBox(width: 2),
+                      Text(
+                        "Top",
+                        style: TextStyle(
+                          color: Colors.white,
+                          fontWeight: FontWeight.bold,
+                          fontSize: 10,
+                        ),
                       ),
                     ],
                   ),
                 ),
               ),
-            ],
-          ),
-
-          // Badge cho sản phẩm đề xuất
-          if (isRecommended)
-            Positioned(
-              top: 0,
-              right: 0,
-              child: Container(
-                padding: EdgeInsets.symmetric(horizontal: 8, vertical: 4),
-                decoration: BoxDecoration(
-                  color: Colors.amber,
-                  borderRadius: BorderRadius.only(
-                    topRight: Radius.circular(10),
-                    bottomLeft: Radius.circular(10),
-                  ),
-                ),
-                child: Row(
-                  mainAxisSize: MainAxisSize.min,
-                  children: [
-                    Icon(Icons.thumb_up, color: Colors.white, size: 12),
-                    SizedBox(width: 2),
-                    Text(
-                      "Top",
-                      style: TextStyle(
-                        color: Colors.white,
-                        fontWeight: FontWeight.bold,
-                        fontSize: 10,
-                      ),
-                    ),
-                  ],
-                ),
-              ),
-            ),
-        ],
+          ],
+        ),
       ),
     );
+
+
+
   }
 }
