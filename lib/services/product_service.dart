@@ -296,57 +296,7 @@ class ProductService {
         final productsCollection = _firestore.collection('amazon_products');
         List<Product> allRecommendedProducts = [];
         
-        // Tìm kiếm từng sản phẩm một để debug kỹ
-        for (String id in productIds) {
-          try {
-            // Cách 1: Tìm theo document ID
-            var docSnapshot = await productsCollection.doc(id).get();
-            if (docSnapshot.exists) {
-              print('Found product with document ID: $id');
-              allRecommendedProducts.add(Product.fromFirestore(docSnapshot));
-              continue;
-            }
-            
-            // Cách 2: Tìm theo product_id field
-            var query1 = await productsCollection
-                .where('product_id', isEqualTo: id)
-                .limit(1)
-                .get();
-                
-            if (query1.docs.isNotEmpty) {
-              print('Found product with product_id field: $id');
-              allRecommendedProducts.add(Product.fromFirestore(query1.docs.first));
-              continue;
-            }
-            
-            // Cách 3: Tìm theo item_amazon_id field
-            var query2 = await productsCollection
-                .where('item_amazon_id', isEqualTo: id)
-                .limit(1)
-                .get();
-                
-            if (query2.docs.isNotEmpty) {
-              print('Found product with item_amazon_id field: $id');
-              allRecommendedProducts.add(Product.fromFirestore(query2.docs.first));
-              continue;
-            }
-            
-            // Nếu các cách trên đều không tìm thấy
-            print('Product with ID $id not found in any format');
-          } catch (e) {
-            print('Error searching for product $id: $e');
-          }
-          
-          // Nếu tìm được đủ 20 sản phẩm thì dừng
-          if (allRecommendedProducts.length >= 20) {
-            print('Found 20 products - stopping search');
-            break;
-          }
-        }
-        
-        print('Found a total of ${allRecommendedProducts.length} recommended products');
-        
-        // Nếu không tìm thấy sản phẩm nào, thử dùng sản phẩm phổ biến
+      
         if (allRecommendedProducts.isEmpty) {
           print('No products found - falling back to trending products');
           return await getTrendingProducts();
