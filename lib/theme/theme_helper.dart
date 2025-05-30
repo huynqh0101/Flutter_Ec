@@ -141,7 +141,7 @@ class LightCodeColors {
   Color get black900 => const Color(0XFF000000);
   Color get blueGray100 => const Color(0XFFD2D6DB);
   Color get blueGray300 => const Color(0XFF9DA4AE);
-  Color get deepPurpleA200 => const Color(0XFF8C68EE);
+  Color get deepPurpleA200 => const Color(0XFF5856D6);
   Color get gray200 => const Color(0XFFE5E7EB);
   Color get gray50 => const Color(0XFFFCFCFD);
   Color get gray5001 => const Color(0XFFF9FAFB);
