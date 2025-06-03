@@ -18,6 +18,8 @@ class HomeScreenModel {
   List<BannerListItemModel> bannerList = [
     BannerListItemModel(image: "lib/assets/images/banner1.png"),
     BannerListItemModel(image: "lib/assets/images/banner2.png"),
+    BannerListItemModel(image: "lib/assets/images/banner3.png"),
+    BannerListItemModel(image: "lib/assets/images/banner4.png"),
   ];
 
   Future<List<Product>> getTrendingProductList() async {

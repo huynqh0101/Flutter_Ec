@@ -101,6 +101,8 @@ flutter:
     - lib/assets/icons/nav_account.svg
     - lib/assets/icons/nav_cart.svg
     - lib/assets/icons/nav_menu.svg
+    - lib/assets/images/banner3.png
+    - lib/assets/images/banner4.png
 #    - functions/requirements.txt
 
 # An image asset can refer to one or more resolution-specific "variants", see

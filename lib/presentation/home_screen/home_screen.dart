@@ -147,7 +147,7 @@ class HomeScreenState extends State<HomeScreen> {
     return Consumer<HomeScreenProvider>(
       builder: (context, provider, child) {
         return CarouselSlider.builder(
-          itemCount: 2,
+          itemCount: 4,
           itemBuilder: (context, index, realIndex) {
             BannerListItemModel model =
                 provider.homeScreenModel.bannerList[index];

@@ -17,6 +17,8 @@ class Assets {
   static const String assetsIconsToys = 'lib/assets/icons/toys.svg';
   static const String assetsImagesBanner1 = 'lib/assets/images/banner1.png';
   static const String assetsImagesBanner2 = 'lib/assets/images/banner2.png';
+  static const String assetsImagesBanner3 = 'lib/assets/images/banner3.png';
+  static const String assetsImagesBanner4 = 'lib/assets/images/banner4.png';
   static const String assetsImagesDefaultAva = 'lib/assets/images/default_ava.svg';
   static const String assetsImagesImgWelcomeOnboarding = 'lib/assets/images/img_welcome_onboarding.jpg';
   static const String assetsImagesLogo = 'lib/assets/images/logo.svg';
