@@ -27,7 +27,8 @@ class CustomTextFormField extends StatelessWidget {
   final Color? fillColor;
   final bool filled;
   final String? Function(String?)? validator;
-
+// Constructor
+  // Constructor with named parameters
   const CustomTextFormField({
     Key? key,
     this.alignment,
