@@ -3,7 +3,8 @@ import 'package:flutter/material.dart';
 import 'package:flutter_svg/flutter_svg.dart';
 import 'package:http/http.dart' as http;
 import 'dart:typed_data';
-
+// This file defines a custom image view widget that can handle local and network images,
+// including SVG, PNG, and JPG formats. It supports loading images from the network,
 extension ImageTypeExtension on String {
   ImageType get imageType {
     if (startsWith('http')) {
