@@ -4,6 +4,7 @@ import 'package:flutter/material.dart';
 
 import '../core/app_export.dart';
 
+//Định ngĩa các tab trong bottom bar
 enum BottomBarEnum {Home, Cart, Account, Menu}
 
 class CustomBottomBar extends StatefulWidget {
